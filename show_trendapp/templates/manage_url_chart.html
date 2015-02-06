@@ -1,0 +1,111 @@
+{% load nvd3_tags %}
+<head>
+    {% load_chart charttype chartdata "linechart_container" kw_extra %}
+</head>
+    {% include_container "linechart_container" 400 800 %}
+<br><br>
+<div class= 'show_table'>
+  <table>
+    <tr>
+       <td width=350;><b> 처음 순위에 든 날짜 및 시간</b></td>
+       <td width=350;><b> 마지막으로 순위에 든 날짜 및 시간 </b></td>
+    </tr>
+    <tr>
+       <td align="center" width=500; >
+       	{{start_date|date:"Y.m.d l"}} </td>
+       <td align="center" width=500; >
+       	{{end_date|date:"Y.m.d l"}}</td>
+    </tr>
+</table>
+<br>
+<br>
+<table>
+	<tr>
+	   <td width=200;><b> Hour </b></td>
+	   {% for i in chart_info.chartdata.x|slice:":6" %}
+	   <td width=50;><b> {{ i }} </b></td>
+		{% endfor %}
+	</tr>
+
+	<tr>
+	   <td width=200;><b> 누적 스크랩 횟수 </b></td>
+	   {% for i in chart_info.chartdata.y1|slice:":6" %}
+	   <td width=50;>{{ i }}/{{cntperhour|get_at_index:forloop.counter0}}</td>
+	   {% endfor %}
+	</tr>
+	<tr>
+	   <td width=200;><b> 평균 스크랩 횟수 </b></td>
+	   {% for i in chart_info.chartdata.y2|slice:":6" %}
+	   <td width=50;> {{ i }}</td>
+	   {% endfor %}
+	</tr>
+	</table>
+		<br>
+<table>
+	<tr>
+	   <td width=200;><b> Hour </b></td>
+	   {% for i in chart_info.chartdata.x|slice:"6:12" %}
+	   <td width=50;><b> {{ i }} </b></td>
+		{% endfor %}
+	</tr>
+
+	<tr>
+	   <td width=200;><b> 누적 스크랩 횟수 </b></td>
+	   {% for i in chart_info.chartdata.y1|slice:"6:12" %}
+	   <td width=50;> {{ i }}/{{cntperhour|get_at_index:forloop.counter0}}</td>
+	   {% endfor %}
+	</tr>
+	<tr>
+	   <td width=200;><b> 평균 스크랩 횟수 </b></td>
+	   {% for i in chart_info.chartdata.y2|slice:"6:12" %}
+	   <td width=50;> {{ i }}</td>
+	   {% endfor %}
+	</tr>
+	</table>
+		<br>
+
+<table>
+	<tr>
+	   <td width=200;><b> Hour </b></td>
+	   {% for i in chart_info.chartdata.x|slice:"12:18" %}
+	   <td width=50;><b> {{ i }} </b></td>
+		{% endfor %}
+	</tr>
+
+	<tr>
+	   <td width=200;><b> 누적 스크랩 횟수 </b></td>
+	   {% for i in chart_info.chartdata.y1|slice:"12:18" %}
+	   <td width=50;>{{ i }}/{{cntperhour|get_at_index:forloop.counter0}}</td>
+	   {% endfor %}
+	</tr>
+	<tr>
+	   <td width=200;><b> 평균 스크랩 횟수 </b></td>
+	   {% for i in chart_info.chartdata.y2|slice:"12:18" %}
+	   <td width=50;> {{ i }}</td>
+	   {% endfor %}
+	</tr>
+	</table>
+	<br>
+	<table>
+	<tr>
+	   <td width=200;><b> Hour </b></td>
+	   {% for i in chart_info.chartdata.x|slice:"18:24" %}
+	   <td width=50;><b> {{ i }} </b></td>
+		{% endfor %}
+	</tr>
+	<tr>
+	   <td width=200;><b> 누적 스크랩 횟수 </b></td>
+	   {% for i in chart_info.chartdata.y1|slice:"18:24" %}
+	   <td width=50;>{{ i }} /{{cntperhour|get_at_index:forloop.counter0}}</td>
+	   {% endfor %}
+	</tr>
+	<tr>
+	   <td width=200;><b> 평균 스크랩 횟수 </b></td>
+	   {% for i in chart_info.chartdata.y2|slice:"18:24" %}
+	   <td width=50;> {{ i }}</td>
+	   {% endfor %}
+	</tr>
+</table>
+</div>
+<br>
+<br>

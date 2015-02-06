@@ -1,0 +1,26 @@
+
+{% load nvd3_tags %}
+<head>
+    {% load_chart charttype chartdata "linechart_container" kw_extra %}
+</head>
+<body>
+    {% include_container "linechart_container" 400 800 %}
+<br><br>
+<div class= 'show_table'>
+<table>
+    <tr>
+       <td width=300><b> Date </b></td>
+       <td width=200><b> Scrap Counts </b></td>
+       <td width=200><b> + / - </b></td>
+    </tr>
+    {% for i in time_info %}
+    <tr>
+      <td width=300>{{ i|date:"Y.m.d l" }}</td>
+      <td width=200>{{ count_info|get_at_index:forloop.counter0 }}</td>
+      <td width=200>{{ scrap_counts_diff|get_at_index:forloop.counter0 }}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+<br>
+</body>

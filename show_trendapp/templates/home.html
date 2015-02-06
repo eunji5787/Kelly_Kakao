@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block menu %}
+{{ recent_list.0.trend_date|date:"Y. m. d l"}} 의 뜨는 Url
+{% endblock %}
+{% block main %}
+{% include 'hourly_trending_chart.html' %}
+{% endblock %}
+

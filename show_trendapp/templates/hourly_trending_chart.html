@@ -1,0 +1,28 @@
+{% load nvd3_tags %}
+<head>
+{% load_chart charttype chartdata "discretebarchart_container" %}
+</head>
+<br>
+    {% include_container "discretebarchart_container"  400 600 %}
+<br>
+<form method= "post">
+{% csrf_token %}
+<div class= 'show_table'>
+  <table>
+    <tr>
+       <td width=50;><b> Url 관리 선택 </b></td>
+       <td width=300;><b> URL 링크 </b></td>
+       <td width=300;><b> 타이틀 </b></td>
+       <td width=50;><b> 공유 횟수 </b></td>
+    </tr>
+    {% for url, TandC in url_dict %}
+    <tr>
+      <td width=50;>
+        <button name="manage" class="black" value="{{url}}" type="submit"> 관리 </button></td>
+    	<td width=300;><a href="{{ url }}">{{ url }}
+    	<td width=300;>{{ TandC.0 }}</td>
+    	<td width=500;>{{ TandC.1 }}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>

@@ -1,0 +1,16 @@
+
+.list4 {
+    width:1200px; font-family:Georgia, Times, serif;
+    -webkit-column-count: 4; /* Chrome, Safari, Opera */
+    -moz-column-count: 4; /* Firefox */
+    column-count: 4;
+    display:table-cell;
+    }
+.list4 ul { list-style: none; }
+    columns: 4;
+.list4 ul li { }
+.list4 ul li a { display:block; text-decoration:none; color:#000000; background-color:#FFFFFF; line-height:15px;
+  border-bottom-style:solid; border-bottom-width:1px; border-bottom-color:#CCCCCC; padding-left:10px; cursor:pointer; }
+.list4 ul li a:hover { color:#888888; background-image:url(../images/hover.png); background-repeat:repeat-x; }
+.list4 ul li a strong { margin-right:10px; }
+

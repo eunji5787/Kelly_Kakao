@@ -1,0 +1,60 @@
+{% load nvd3_tags %}
+<head>
+    {% load_chart charttype chartdata chartcontainer %}
+    {% load_chart charttype chartdata1 chartcontainer1 %}
+</head>
+<br>
+<div class="d-table">
+   <div class="d-row">
+       <div class="d-cell">
+{% include_container chartcontainer 400 400 %}
+       <br><b>25세 이하 공유 URL Link</b></div>
+       <div class="d-cell">
+{% include_container chartcontainer1 400 400 %}
+	<br><b>25세 이상 공유 URL Link</b></div>
+   </div>
+</div>
+<br><br>
+<div class="d-table">
+  <div class= 'show_table'>
+  <table>
+    <tr>
+       <td width=50><b>Rank</b></td>
+       <td width=400><b>25세 이하 공유 URL Link</b></td>
+       <td width=100><b>Sharing counts</b></td>
+       <td width=150><b>Date</b></td>
+    </tr>
+    {% for i in time_info1|slice:":10" %}
+    <tr>
+      <td width=50>{{ forloop.counter }}</td>
+      <td width=400><a href="{{ xdata1|get_at_index:forloop.counter0}}">
+        {{ xdata1|get_at_index:forloop.counter0}}</a></td>
+      <td width=100>{{ ydata1|get_at_index:forloop.counter0}}</td>
+      <td width=150>{{ i|date:"Y m d l"}}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+<br>
+<div class="d-table">
+  <div class= 'show_table'>
+  <table>
+    <tr>
+       <td width=50><b>Rank</b></td>
+       <td width=400><b>25세 이상 공유 URL Link</b></td>
+       <td width=100><b>Sharing counts</b></td>
+       <td width=150><b>Date</b></td>
+     </tr>
+    {% for i in time_info2|slice:":10"  %}
+    <tr>
+      <td width=50>{{ forloop.counter }}</td>
+      <td width=400><a href="{{ xdata2|get_at_index:forloop.counter0}}">
+        {{ xdata2|get_at_index:forloop.counter0}}</a></td>
+      <td width=100>{{ ydata2|get_at_index:forloop.counter0}}</td>
+      <td width=200>{{ i|date:"Y m d l"}}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>

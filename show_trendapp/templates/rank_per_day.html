@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block menu %}
+{{ target_date|date:"Y.m.d l"}}
+{% endblock %}
+{% block main %}
+<form action="" method="post">
+<div class = "boxes">
+{{ form.dayrank_date }}
+<button type="submit"> Find </button>
+{% csrf_token %}
+{% include 'chart_rank_per_day.html' %}
+{% endblock %}
+</div>
+</form>

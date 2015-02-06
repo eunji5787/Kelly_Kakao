@@ -1,0 +1,54 @@
+{% load static %}
+<head>
+<link media="all" href="/static/CitrusIsland.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" language="javascript" src='{% static 'checkbox.js' %}'>
+</script>
+<link media="all" href="{% static 'button.css' %}" type="text/css" rel="stylesheet" />
+<link media="all" href="{% static 'nvd3/src/nv.d3.css' %}" type="text/css" rel="stylesheet" />
+<link media="all" href="{% static 'showtable.css' %}" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src='{% static 'd3/d3.min.js' %}'></script>
+<script type="text/javascript" src='{% static 'nvd3/nv.d3.js' %}'></script>
+<link media="all" href="{% static 'list4.css' %}" type="text/css" rel="stylesheet" />
+<title>{% block title %}Admin Page for KaKao{% endblock %}</title>
+</head>
+<body>
+<div id="header">
+	<h1 id="logo">Admin Page for <span> <a href="/">KaKaoStory</a> </span></h1>
+</div>
+
+<div id="menu">
+	<h3>{% block menu %} {% endblock %}</h3>
+</div>
+
+<div id="sidebar" >
+	<h1> Weekly </h1>
+	<ul class="sidemenu">
+		<li><a href="/rankperweek">주별 스크랩 랭킹</a></li>
+		<li><a href="/diffperweek">주별 스크랩 등락</a></li>
+	</ul>
+	<h1> Daily </h1>
+	<ul class="sidemenu">
+		<li><a href="/rankperday">일별 스크랩 랭킹</a></li>
+		<li><a href="/diffperday">일별 스크랩 등락</a></li>
+		<li><a href="/trafficperday">일별 스크랩 횟수</a></li>
+		<li><a href="/twentyfivetrend">25세 기준 경향</a></li>
+	</ul>
+ 	<h1> Hourly </h1>
+	<ul class="sidemenu">
+		<li><a href="/trafficperhour">시간별 스크랩 횟수</a></li>
+		<li><a href="/hourlyurl">시간별 뜨는 URL</a></li>
+	</ul>
+	<h1> URL </h1>
+	<ul class="sidemenu">
+		<li><a href="/manageurl">시간별 관리</a></li>
+		<li><a href="/manageurlday">일별 관리</a></li>
+		<li><a href="/manageurlweek">주 관리</a></li>
+	</ul>
+
+</div>
+
+<div id="main">
+	{% block main %} {% endblock %}
+</div>
+</body>
+</html>

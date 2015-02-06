@@ -1,0 +1,96 @@
+{% load nvd3_tags %}
+<head>
+    {% load_chart charttype chartdata "linechart_container" kw_extra %}
+</head>
+    {% include_container "linechart_container" 400 800 %}
+<br><br>
+<div class= 'show_table'>
+<br>
+  <table>
+   <tr>
+       <td width=40;><b> Hour </b></td>
+       {% for i in chart_info.chartdata.x|slice:":6" %}
+       <td width=40;><b> {{ i }} </b></td>
+       {% endfor %}
+    </tr>
+   <tr>
+       <td width=40;><b> 스크랩 횟수 </b></td>
+       {% for i in chart_info.chartdata.y|slice:":6" %}
+       <td width=40;> {{ i }}</td>
+      {% endfor %}
+    </tr>
+     <tr>
+       <td width=40;><b> + / - </b></td>
+      {% for i in scrap_counts_diff|slice:":6" %}
+       <td width=40;>{{ i }}</td>
+      {% endfor %}
+    </tr>
+   </table>
+   <br>
+  <table>
+   <tr>
+       <td width=40;><b> Hour </b></td>
+       {% for i in chart_info.chartdata.x|slice:"6:12" %}
+       <td width=40;><b> {{ i }} </b></td>
+       {% endfor %}
+    </tr>
+   <tr>
+       <td width=40;><b> 스크랩 횟수 </b></td>
+       {% for i in chart_info.chartdata.y|slice:"6:12" %}
+       <td width=40;> {{ i }}</td>
+      {% endfor %}
+    </tr>
+     <tr>
+       <td width=40;><b> + / - </b></td>
+      {% for i in scrap_counts_diff|slice:"6:12" %}
+       <td width=40;>{{ i }}</td>
+      {% endfor %}
+    </tr>
+   </table>
+   <br>
+   <table>
+  <table>
+   <tr>
+       <td width=40;><b> Hour </b></td>
+       {% for i in chart_info.chartdata.x|slice:"12:18" %}
+       <td width=40;><b> {{ i }} </b></td>
+       {% endfor %}
+    </tr>
+   <tr>
+       <td width=40;><b> 스크랩 횟수 </b></td>
+       {% for i in chart_info.chartdata.y|slice:"12:18" %}
+       <td width=40;> {{ i }}</td>
+      {% endfor %}
+    </tr>
+     <tr>
+       <td width=40;><b> + / - </b></td>
+      {% for i in scrap_counts_diff|slice:"12:18" %}
+       <td width=40;> {{ i }}</td>
+      {% endfor %}
+    </tr>
+   </table>
+   <br>
+   <table>
+   <tr>
+       <td width=40;><b> Hour </b></td>
+       {% for i in chart_info.chartdata.x|slice:"18:" %}
+       <td width=40;><b> {{ i }} </b></td>
+    	{% endfor %}
+    </tr>
+
+   <tr>
+       <td width=40;><b> 스크랩 횟수 </b></td>
+       {% for i in chart_info.chartdata.y|slice:"18:" %}
+       <td width=40;> {{ i }}</td>
+    	{% endfor %}
+    </tr>
+
+     <tr>
+       <td width=40;><b> + / - </b></td>
+      {% for i in scrap_counts_diff|slice:"18:" %}
+       <td width=40;> {{ i }}</td>
+      {% endfor %}
+    </tr>
+</table>
+</div>
+<br>

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block menu %}
+{{ trend_list.0.trend_date|date:"Y.m.d l" }} {{ trend_list.0.trend_hh }} 시
+{% endblock %}
+{% block main %}
+<form action="" method="post">
+{% csrf_token %}
+<div class = "boxes">
+{{ form.trend_date }} &nbsp;
+<button type="submit"> Find </button>
+<br><br>
+{% for i in 24|times %}
+<button name="hour" value="{{i}}" type="submit"> {{i}} </button>
+{% endfor %}
+<br>
+{% include 'hourly_trending_chart.html' %}
+{% endblock %}
+</div>
+</form>

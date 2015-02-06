@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block menu %}
+{% if show_week %}
+지난 일주일 간의 트래픽
+{% else %}
+트래픽 일별 통계
+{% endif %}
+{% endblock %}
+{% block main %}
+<form action="" method="post">
+{% csrf_token %}
+<div class = "boxes">
+{{ form.traffic_start }} ~ {{ form.traffic_end }}
+<button type="submit"> Find </button>
+<br><br>
+</div>
+{% include 'traffic_per_day_chart.html' %}
+{% endblock %}
+</form>

@@ -1,0 +1,64 @@
+<br>
+<form method= "post">
+{% csrf_token %}
+<br>
+<div class= 'show_table'>
+< 어제 대비 오늘 최대 상승 >
+<br><br>
+<table>
+  <tr>
+     <td width=50;><b> Rank </b></td>
+     <td width=300;><b> URL 링크 </b></td>
+     <td width=50;><b> +/- </b></td>
+     <td width=100;><b> 어제 공유 횟수 </b></td>
+     <td width=100;><b> 오늘 공유 횟수 </b></td>
+  </tr>
+  {% for k,v in same_dict %}
+  <tr>
+    <td width=50;>{{ forloop.counter }}</td>
+  	<td width=300;><a href="{{ k.0 }}">{{ k.0 }}</td>
+  	<td width=50;>{{ v.2 }}</td>
+  	<td width=100;>{{ v.0 }}</td>
+  	<td width=100;>{{ v.1 }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<br>
+< 어제 대비 오늘 최대 하락 >
+<br><br>
+<table>
+  <tr>
+     <td width=50;><b> Rank </b></td>
+     <td width=300;><b> URL 링크 </b></td>
+     <td width=50;><b> +/- </b></td>
+     <td width=100;><b> 어제 공유 횟수 </b></td>
+     <td width=100;><b> 오늘 공유 횟수 </b></td>
+  </tr>
+  {% for k,v in minus_dict %}
+  <tr>
+    <td width=50;>{{ forloop.counter }}</td>
+  	<td width=300;><a href="{{ k.0 }}">{{ k.0 }}</td>
+  	<td width=50;>{{ v.2 }}</td>
+  	<td width=100;>{{ v.0 }}</td>
+  	<td width=100;>{{ v.1 }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<br>
+< 어제 없었지만 오늘 등장 >
+<br><br>
+<table>
+  <tr>
+     <td width=50;><b> Rank </b></td>
+     <td width=400;><b> 오늘 첫 등장 URL 링크 </b></td>
+     <td width=150;><b> 공유 횟수 </b></td>
+  </tr>
+  {% for k,v in diff_dict %}
+  <tr>
+    <td width=50;>{{ forloop.counter }}</td>
+  	<td width=400;><a href="{{ k.0 }}">{{ k.0 }}</td>
+  	<td width=150;>{{ v.1 }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>

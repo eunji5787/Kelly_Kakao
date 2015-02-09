@@ -335,54 +335,40 @@ def chart_traffic_per_day(start_time, end_time, traffic_cnt_list):
 
 
 def traffic_per_hour(request):
-    variables = RequestContext(request)
-    target_date = datetime.date.today() - datetime.timedelta(days=1)
     show_today = True
-    traffic_cnt_list = TrafficPerHour.objects.filter(
-        traffic_date = target_date
-        ).values('traffic_hh').order_by('traffic_hh').annotate(Sum('traffic_cnt'))
-
-    chart_info = chart_traffic_per_hour(traffic_cnt_list)
 
     if request.method == 'POST':
         form = TrafficPerHourForm(request.POST)
-        show_today = False
         if form.is_valid():
-            info = form.cleaned_data
-            target_date = info['traffic_date']
-            traffic_cnt_list = TrafficPerHour.objects.filter(
-                traffic_date = target_date
-                ).values('traffic_hh').order_by('traffic_hh').annotate(Sum('traffic_cnt'))
-
-            chart_info = chart_traffic_per_hour(traffic_cnt_list)
+            show_today = False
+            target_date = form.cleaned_data['traffic_date']
     else:
         form = TrafficPerHourForm()
+        target_date = datetime.date.today() - datetime.timedelta(days=1)
 
+    chart_info = get_traffichour_chart_info(target_date)
     variables = RequestContext(request, chart_info)
     return render_to_response('traffic_per_hour.html',locals(), variables)
 
+def get_traffichour_chart_info(target_date):
+    traffic_cnt_list = TrafficPerHour.objects.filter(traffic_date = target_date).order_by('traffic_hh')
+
+    return chart_traffic_per_hour(traffic_cnt_list)
 
 def chart_traffic_per_hour(traffic_cnt_list):
     xdata = []
     ydata = []
-    scrap_counts_diff = []
 
     for i in traffic_cnt_list:
-        xdata.append(i['traffic_hh'])
-        ydata.append(i['traffic_cnt__sum'])
+        xdata.append(i.traffic_hh)
+        ydata.append(i.traffic_cnt)
 
     scrap_counts_diff = calculate_difference(ydata)
 
     tooltip_date = "%d %b %Y %H:%M:%S %p"
-    extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"},
-                   "date_format": tooltip_date}
+    extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"}, "date_format": tooltip_date}
     chartdata = {
-        'x': xdata,
-        'name': '시간별 스크랩 횟수'.decode("utf-8"),
-        'y': ydata,
-        'extra': extra_serie,
-    }
-
+        'x': xdata, 'name': '시간별 스크랩 횟수'.decode("utf-8"), 'y': ydata, 'extra': extra_serie }
     kw_extra = { 'x_is_date': False , 'x_axis_format': ""}
     charttype = "lineChart"
     data = {
@@ -402,62 +388,47 @@ def calculate_difference(scrap_counts):
     return l
 
 def twentyfive_trend(request):
-    variables = RequestContext(request)
     show_week = True
-    end_time = datetime.date.today() - datetime.timedelta(days=1)
-    start_time = end_time - datetime.timedelta(days=6)
-
-    undertf_list = UrlPerAge.objects.filter(
-        age_date__range = [start_time, end_time], over_tf=False
-        ).order_by('-age_url_cnt')
-    overtf_list = UrlPerAge.objects.filter(
-        age_date__range = [start_time, end_time], over_tf=True
-        ).order_by('-age_url_cnt')
-    chart_info = chart_twentyfive_trend(undertf_list, overtf_list)
 
     if request.method == 'POST':
         form = UrlPerAgeForm(request.POST)
         if form.is_valid():
             show_week = False
-            info = form.cleaned_data
-            start_time = info['age_start']
-            end_time = info['age_end']
-            undertf_list = UrlPerAge.objects.filter(
-                age_date__range = [start_time, end_time], over_tf=False
-                ).order_by('-age_url_cnt')
-            overtf_list = UrlPerAge.objects.filter(
-                age_date__range = [start_time, end_time], over_tf=True
-                ).order_by('-age_url_cnt')
-            chart_info = chart_twentyfive_trend(undertf_list, overtf_list)
+            start_time = form.cleaned_data['age_start']
+            end_time = form.cleaned_data['age_end']
     else:
         form = UrlPerAgeForm()
+        end_time = datetime.date.today() - datetime.timedelta(days=1)
+        start_time = end_time - datetime.timedelta(days=6)
 
+    chart_info = get_twentyfive_chart_info(start_time, end_time)
     variables = RequestContext(request, chart_info)
-    return render_to_response('twentyfive_trend.html', locals(),
-        variables)
+    return render_to_response('twentyfive_trend.html', locals(), variables)
 
+def get_twentyfive_chart_info(start_time, end_time):
+    undertf_list = UrlPerAge.objects.filter(age_date__range = [start_time, end_time], over_tf=False
+        ).order_by('-age_url_cnt')
+    overtf_list = UrlPerAge.objects.filter(age_date__range = [start_time, end_time], over_tf=True
+        ).order_by('-age_url_cnt')
+
+    return chart_twentyfive_trend(undertf_list, overtf_list)
+
+def get_twentyfive_x_and_y(age_list):
+    time_info = []
+    ydata = []
+    xdata = []
+
+    for i in age_list:
+        if not i.age_url in xdata:
+            xdata.append(i.age_url)
+            ydata.append(i.age_url_cnt)
+            time_info.append(i.age_date)
+
+    return xdata, ydata, time_info
 
 def chart_twentyfive_trend(undertf_list, overtf_list):
-    time_info1 = []
-    time_info2 = []
-    ydata1 = []
-    ydata2 = []
-    xdata1 = []
-    xdata2 = []
-
-    for i in undertf_list:
-        if not i.age_url in xdata1:
-            xdata1.append(i.age_url)
-            ydata1.append(i.age_url_cnt)
-            time_info1.append(i.age_date)
-
-    for i in overtf_list:
-        if not i.age_url in xdata2:
-            xdata2.append(i.age_url)
-            ydata2.append(i.age_url_cnt)
-            time_info2.append(i.age_date)
-
-
+    xdata1, ydata1, time_info1 = get_twentyfive_x_and_y(undertf_list)
+    xdata2, ydata2, time_info2 = get_twentyfive_x_and_y(overtf_list)
     extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"}}
     chartcontainer = 'discretebarchart_container'
     chartcontainer1 = 'discretebarchart_container1'
@@ -480,56 +451,59 @@ def chart_twentyfive_trend(undertf_list, overtf_list):
 
     return locals()
 
-
 def hourly_trending_url(request):
-    variables = RequestContext(request)
-    trend_list = TrendingUrl.objects.order_by('-trend_date','-trend_hh','-trend_url_cnt')
-    chart_info = chart_trendingurl(trend_list[:10])
 
     if request.method == 'POST':
         select_url(request)
-        if request.POST.has_key('hour'):
-            hour = request.POST.get('hour')
-        else:
-            hour = 0
-        form = TrendingUrlForm(request.POST)
-        if form.is_valid():
-            info = form.cleaned_data
-            trend_date = info['trend_date']
 
-            if TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
-                trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour)
-                trend_list = trend_list[:10]
-            else:
-                trend_list = TrendingUrl.objects.order_by('-trend_date','-trend_hh','-trend_url_cnt')
-                trend_list = trend_list[:10]
-            chart_info = chart_trendingurl(trend_list)
+        form = TrendingUrlForm(request.POST)
+        hour = request.POST.get('hour')
+        if hour == None:
+            hour = 0
+        if form.is_valid():
+            trend_date = form.cleaned_data['trend_date']
+            if not TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
+
+                latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
+                trend_date = latest.trend_date
+                hour = latest.trend_hh
+
 
     else:
+        print "5"
         form = TrendingUrlForm()
+        latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
+        trend_date = latest.trend_date
+        hour = latest.trend_hh
+
+    print "6"
+    chart_info = get_trendingurl_chart_info(trend_date, hour)
     variables = RequestContext(request, chart_info)
     return render_to_response('hourly_trending_url.html',locals(), variables)
 
+def get_trendingurl_chart_info(trend_date, hour):
+    limit = 10
+    if TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
+        trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
+    else:
+        trend_list = []
+
+    return chart_trendingurl(trend_list[:limit])
 
 def chart_trendingurl(trending_list):
-    url_dict = {}
+    title = []
     xdata = []
     ydata = []
 
     for i in trending_list:
-        url_dict[i.trend_url] = (i.trend_title, i.trend_url_cnt)
-
-    url_dict = url_dict.items()
-    url_dict.sort(key=lambda x: x[1][1], reverse=True)
-
-    for url in url_dict:
-        xdata.append(url[0])
-        ydata.append(url[1][1])
+        xdata.append(i.trend_url)
+        ydata.append(i.trend_url_cnt)
+        title.append(i.trend_title)
 
     extra_serie = {"tooltip": {"y_start": "", "y_end": " cal"}}
     chartdata = {'x': xdata, 'y1': ydata, 'extra1': extra_serie}
     charttype = "discreteBarChart"
-    data = {'charttype': charttype, 'chartdata': chartdata, 'url_dict': url_dict}
+    data = {'charttype': charttype, 'chartdata': chartdata }
 
     return locals()
 
@@ -547,9 +521,7 @@ def manage_url(request):
 
         form = ManageUrlForm(request.POST)
         if form.is_valid():
-
-            info = form.cleaned_data
-            trend_url = info['trend_url']
+            trend_url = form.cleaned_data['trend_url']
             url_list = TrendingUrl.objects.filter(trend_url=trend_url).order_by(
                 'trend_date', 'trend_hh')
             chart_info = chart_manage_url(url_list)
@@ -605,6 +577,7 @@ def chart_manage_url(url_list):
 
 def select_url(request):
     selected_url = request.POST.get('manage')
+    print "2"
 
     if TrendingUrl.objects.filter(trend_url=selected_url).exists():
         TrendingUrl.objects.filter(trend_url=selected_url).update(manage_url=True)

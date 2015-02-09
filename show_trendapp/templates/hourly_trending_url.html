@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block menu %}
-{{ trend_list.0.trend_date|date:"Y.m.d l" }} {{ trend_list.0.trend_hh }} 시
+{{ trend_date|date:"Y.m.d l" }} {{ hour }} 시
 {% endblock %}
 {% block main %}
 <form action="" method="post">

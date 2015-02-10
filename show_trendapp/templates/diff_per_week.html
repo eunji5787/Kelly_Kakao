@@ -1,21 +1,14 @@
 {% extends "base.html" %}
 {% block menu %}
-지난 주에 뜨지 않은 새로운 링크
+{{ target_date|date:"Y.m.d l"}}
 {% endblock %}
 {% block main %}
-<div class= 'show_table'>
-  <table>
-    <tr>
-       <td width=50><b>Rank</b></td>
-       <td width=400><b>URL Link</b></td>
-       <td width=100><b>공유 횟수</b></td>    </tr>
-    {% for ind, cnt in diff_dict %}
-    <tr>
-        <td width=50>{{ forloop.counter }}</td>
-    	<td width=400>{{ ind }}</td>
-    	<td width=200>{{ cnt }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<form action="" method="post">
+<div class = "boxes">
+{{ form.weekdate_choice }}
+<button type="submit"> Find </button>
+{% csrf_token %}
+{% include 'chart_diff_per_week.html' %}
 {% endblock %}
-
+</div>
+</form>

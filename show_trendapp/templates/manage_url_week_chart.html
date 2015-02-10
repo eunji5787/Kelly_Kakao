@@ -1,0 +1,38 @@
+{% load nvd3_tags %}
+<head>
+    {% load_chart charttype chartdata "linechart_container" kw_extra %}
+</head>
+    {% include_container "linechart_container" 400 800 %}
+<br><br>
+<div class= 'show_table'>
+{% if show_chart %}
+  <table>
+    <tr>
+       <td width=350;><b> 처음 순위에 든 날짜 및 시간</b></td>
+       <td width=350;><b> 마지막으로 순위에 든 날짜 및 시간 </b></td>
+    </tr>
+    <tr>
+       <td align="center" width=500; >
+       	{{start_date|date:"Y.m.d l"}} </td>
+       <td align="center" width=500; >
+       	{{end_date|date:"Y.m.d l"}}</td>
+    </tr>
+</table>
+<br>
+<br>
+<table>
+	<tr>
+	   <td width=150;><b> Date </b></td>
+	   <td width=50;><b> 스크랩 횟수 </b></td>
+	</tr>
+	<tr>{% for i in chart_info.chartdata.y1 %}{% if not i == 0 %}
+	   <td width=150;><b> {{ time_info1|get_at_index:forloop.counter0 }}  </b></td>
+	   <td width=50;> {{ i }}</td>
+	</tr>{% endif %}{% endfor %}
+	</table>
+{% else %}
+<하루에 100번 이하로 공유된 url은 자료가 수집되지 않습니다 >
+{% endif %}
+</div>
+<br>
+<br>

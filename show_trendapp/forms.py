@@ -39,6 +39,7 @@ class WeekForm(forms.Form):
     def initial_value(self):
     	return self.fields['weekdate_choice'].initial
 
+
 class RankPerDayForm(forms.Form):
 
     dayrank_date = forms.DateField(widget=extras.SelectDateWidget, label = "", initial=datetime.date.today() - datetime.timedelta(days=1))
@@ -85,6 +86,7 @@ class ManageUrlForm(forms.Form):
 			self.fields['trend_url'].initial = CHOICES[0]
 		else:
 			self.fields['trend_url'].initial = ('','')
+
 
 	def initial_value(self):
 

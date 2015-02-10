@@ -33,7 +33,8 @@ def rank_per_week(request):
     if request.method == 'POST':
         form = WeekForm(request.POST)
         if form.is_valid():
-            target_date = datetime.datetime.strptime(form.cleaned_data['weekdate_choice'], '%Y-%m-%d')
+            target_date = datetime.datetime.strptime(form.cleaned_data[
+                'weekdate_choice'], '%Y-%m-%d')
     else:
         form = WeekForm()
         target_date = WeekForm().initial_value()[0]
@@ -42,9 +43,14 @@ def rank_per_week(request):
     variables = RequestContext(request,chart_info)
     return render_to_response('rank_per_week.html',locals(), variables)
 
-def get_agechart_info_week(target_date):
+def get_agechart_info_week(target_date, lastweek_date=None):
     target_end = target_date + datetime.timedelta(days=6)
     target_list = UrlPerAge.objects.filter(age_date__range=[target_date,target_end]).order_by('-age_url_cnt')
+    if lastweek_date != None:
+        last_end = lastweek_date + datetime.timedelta(days=6)
+        lastweek_list = UrlPerAge.objects.filter(age_date__range=[lastweek_date,last_end]).order_by('-age_url_cnt')
+
+        return chart_diff_per_week(target_list, lastweek_list)
 
     return chart_rank_per_week(target_list)
 
@@ -67,78 +73,40 @@ def chart_rank_per_week(target_list):
     return locals()
 
 def diff_per_week(request):
-    variables = RequestContext(request)
-    diff_dict = {}
-    sameurl_list = []
+    if request.method == 'POST':
+        form = WeekForm(request.POST)
+        if form.is_valid():
+            target_date = datetime.datetime.strptime(form.cleaned_data[
+                'weekdate_choice'], '%Y-%m-%d')
+    else:
+        form = WeekForm()
+        target_date = WeekForm().initial_value()[0]
 
-    lastweek_end = datetime.date.today() - datetime.timedelta(days=8)
-    lastweek_start = lastweek_end - datetime.timedelta(days=6)
-    lastweek = UrlPerAge.objects.filter(
-        age_date__range = [lastweek_start, lastweek_end]).order_by('-age_url_cnt')
-    distinct_lastweek = lastweek.values_list('age_url' ,flat=True).distinct()
-
-    thisweek_end = datetime.date.today() - datetime.timedelta(days=1)
-    thisweek_start = thisweek_end - datetime.timedelta(days=6)
-    thisweek = UrlPerAge.objects.filter(
-        age_date__range = [thisweek_start, thisweek_end]).order_by('-age_url_cnt')
-
-    for i in thisweek:
-        ind = i.age_url
-        if not ind in distinct_lastweek:
-            if ind in diff_dict.keys():
-                diff_dict[ind] = diff_dict[ind] + i.age_url_cnt
-            else:
-                diff_dict[ind] = i.age_url_cnt
-        else:
-            sameurl_list.append(i.age_url)
-
-    data = chart_diff_per_week(diff_dict, sameurl_list, lastweek, thisweek)
-    variables = RequestContext(request, data)
-
+    lastweek_date = target_date - datetime.timedelta(days=7)
+    chart_info = get_agechart_info_week(target_date, lastweek_date)
+    variables = RequestContext(request,chart_info)
     return render_to_response('diff_per_week.html',locals(), variables)
 
-def chart_diff_per_week(diff_dict, sameurl_list, lastweek, thisweek):
-    xdata = []
-    ydata = []
-    xdata2 = []
-    ydata1 = []
-    ydata2 = []
-    print UrlPerAge.objects.filter(age_url="http://i.sstudy.kr/L/142").values('age_url_cnt')
-    print lastweek.values('age_url_cnt').annotate(Sum('age_url'))
-
-
-    for i in sameurl_list:
-        print i
-
-
-
-    diff_dict = diff_dict.items()
-    diff_dict.sort(key=lambda x: x[1], reverse=True)
-    for k, v in diff_dict:
-        xdata2.append(k)
-        ydata2.append(v)
-
-    extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"}}
-    chartcontainer = 'multibarchart_container'
-    chartcontainer1 = 'discretebarchart_container'
-
+def chart_diff_per_week(target_list, lastweek_list):
     limit = 10
+    diff_dict, same_dict = make_diff(target_list, lastweek_list)
+    xdata , ydata, ydata1 = get_age_x_and_y(same_dict)
+    minus_dict = same_dict[len(same_dict)-limit:len(same_dict)][::-1]
+    same_dict = same_dict[:limit]
+    diff_dict = diff_dict[:limit]
+    extra_serie = {"tooltip": {"y_start": "", "y_end": " cal"}}
+    chartcontainer = "multibarchart_container"
+
     chartdata = {
         'x': xdata[:limit],
-        'name1': '지난 주', 'y1': ydata[:limit], 'extra1': extra_serie,
-        'name2': '이번 주', 'y2': ydata1[:limit], 'extra2': extra_serie,
-    }
-    chartdata1 = {
-        'x': xdata2[:limit], 'y1': ydata2[:limit], 'extra1': extra_serie,
+        'name1': '그 전 주 공유 횟수    '.decode("utf-8"), 'y1': ydata[:limit], 'extra1': extra_serie,
+        'name2': '선택한 주 공유 홋수    '.decode("utf-8"), 'y2': ydata1[:limit], 'extra2': extra_serie,
     }
     charttype = "multiBarChart"
-    charttype1 = "discreteBarChart"
     data = {
         'charttype': charttype,
         'chartdata': chartdata,
-        'chartdata1': chartdata1,
         'chartcontainer':chartcontainer,
-        'chartcontainer1': chartcontainer1
             }
 
     return locals()
@@ -566,6 +534,148 @@ def chart_manage_url(url_list):
     }
 
     return locals()
+
+def manage_url_day(request):
+    if request.method == 'POST':
+
+        if request.POST.has_key('delete'):
+            deleted_url = request.POST.get('delete')
+            if len(deleted_url) == 0:
+                deleted_url = request.POST.get('trend_url')
+            form = delete_url(deleted_url)
+
+        elif request.POST.has_key('select'):
+            form = ManageUrlForm(request.POST)
+        if form.is_valid():
+            trend_url = form.cleaned_data['trend_url']
+    else:
+        form = ManageUrlForm()
+        trend_url = ManageUrlForm().initial_value()[0]
+
+    url_list = UrlPerAge.objects.filter(age_url=trend_url)
+    chart_info = chart_manage_url_day(url_list)
+    variables = RequestContext(request, chart_info)
+    return render_to_response('manage_url_day.html', locals(),variables)
+
+
+def chart_manage_url_day(url_list):
+    try:
+        show_chart = True
+        start_date = url_list.earliest('age_date').age_date
+        end_date = url_list.latest('age_date').age_date
+
+        ydata1 = [0]*int(((end_date-start_date).days)+1)
+        time_info = [start_date + datetime.timedelta(days=x) for x in range(len(ydata1))]
+
+        for i in url_list:
+            ind = time_info.index(i.age_date)
+            if ydata1[ind] ==0:
+                ydata1[ind] = i.age_url_cnt
+            else:
+                ydata1[ind] = ydata1[ind] + i.age_url_cnt
+        xdata = map(lambda x: int(time.mktime(x.timetuple()))*1000, time_info)
+
+    except:
+        show_chart = False
+        ydata1 = []
+        xdata = []
+        time_info = []
+
+    finally:
+        tooltip_date = "%d %b %Y %H:%M:%S %p"
+        extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"},
+                       "date_format": tooltip_date}
+        chartdata = {
+            'x': xdata,
+            'name1': '  일별 스크랩 횟수  ', 'y1': ydata1, 'extra': extra_serie,
+        }
+        kw_extra = { 'x_is_date': True , 'x_axis_format': "%d %b %Y" }
+        charttype = "lineChart"
+        data = {
+            'charttype': charttype,
+            'chartdata': chartdata,
+            'kw_extra' : kw_extra,
+        }
+
+        return locals()
+
+def manage_url_week(request):
+    if request.method == 'POST':
+
+        if request.POST.has_key('delete'):
+            deleted_url = request.POST.get('delete')
+            if len(deleted_url) == 0:
+                deleted_url = request.POST.get('trend_url')
+            form = delete_url(deleted_url)
+
+        elif request.POST.has_key('select'):
+            form = ManageUrlForm(request.POST)
+        if form.is_valid():
+            trend_url = form.cleaned_data['trend_url']
+    else:
+        form = ManageUrlForm()
+        trend_url = ManageUrlForm().initial_value()[0]
+
+    url_list = UrlPerAge.objects.filter(age_url=trend_url)
+    chart_info = chart_manage_url_week(url_list)
+    variables = RequestContext(request, chart_info)
+    return render_to_response('manage_url_week.html', locals(),variables)
+
+
+def chart_manage_url_week(url_list):
+    try:
+        show_chart = True
+        start_agedate = url_list.earliest('age_date').age_date
+        end_agedate = url_list.latest('age_date').age_date
+        days = (end_agedate - start_agedate).days
+
+        time_info = []
+        time_info1 = []
+        for i in xrange(0,days,7):
+            start_date = start_agedate+datetime.timedelta(i)
+            end_date = start_agedate+datetime.timedelta(i+6)
+            if end_date > end_agedate:
+                end_date = end_agedate
+            time_info.append((start_date,end_date))
+            time_info1.append(datetime.date.strftime(start_date, "%Y-%m-%d") +" ~ " +
+                datetime.date.strftime(end_date, "%Y-%m-%d"))
+
+        ydata1 = [0]*int(len(time_info))
+
+        for i in url_list:
+            for j in time_info:
+                if j[0] <= i.age_date <= j[1]:
+                    ind = time_info.index(j)
+            if ydata1[ind] ==0:
+                ydata1[ind] = i.age_url_cnt
+            else:
+                ydata1[ind] = ydata1[ind] + i.age_url_cnt
+
+        xdata = map(lambda x: int(time.mktime(x[0].timetuple()))*1000, time_info)
+
+    except:
+        show_chart = False
+        ydata1 = []
+        xdata = []
+        time_info = []
+
+    finally:
+        tooltip_date = "%d %b %Y %H:%M:%S %p"
+        extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"},
+                       "date_format": tooltip_date}
+        chartdata = {
+            'x': xdata,
+            'name1': '  주별 스크랩 횟수  ', 'y1': ydata1, 'extra': extra_serie,
+        }
+        kw_extra = { 'x_is_date': True , 'x_axis_format': "%d %b %Y" }
+        charttype = "lineChart"
+        data = {
+            'charttype': charttype,
+            'chartdata': chartdata,
+            'kw_extra' : kw_extra,
+        }
+
+        return locals()
 
 def select_url(selected_url):
 

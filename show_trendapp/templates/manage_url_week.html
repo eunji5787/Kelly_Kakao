@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block menu %}
+{{ trend_url }}
+{% endblock %}
+{% block main %}
+<form action="" method="post">
+{% csrf_token %}
+<div class = "boxes">
+{{ form.trend_url }}
+<button name="select" value="{{ trend_url }}" type="submit"> Show Chart </button>
+<button name="delete" value="{{ trend_url }}" type="submit"> Delete </button>
+{% include 'manage_url_week_chart.html' %}
+<br><br>
+</div>
+{% endblock %}
+</form>

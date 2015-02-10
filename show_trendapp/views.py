@@ -19,7 +19,10 @@ import re
 
 def home(request):
     select_url(request)
-    recent_list = TrendingUrl.objects.order_by('-trend_date','-trend_hh','-trend_url_cnt')
+    latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
+    trend_date = latest.trend_date
+    hour = latest.trend_hh
+    recent_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
     recent_list = recent_list[:10]
 
     recent_chart = chart_trendingurl(recent_list)
@@ -27,43 +30,32 @@ def home(request):
     return render_to_response('home.html',locals(), variables)
 
 def rank_per_week(request):
-    variables = RequestContext(request)
-    target_date = datetime.date.today() - datetime.timedelta(days=1)
-    weekrank_list = UrlPerAge.objects.filter(age_date = target_date
-        ).order_by('-age_url_cnt')
-    chart_info = chart_rank_per_day(dayrank_list)
-
     if request.method == 'POST':
-        form = RankPerDayForm(request.POST)
+        form = WeekForm(request.POST)
         if form.is_valid():
-            info = form.cleaned_data
-            target_date = info['dayrank_date']
-            dayrank_list = UrlPerAge.objects.filter(age_date = target_date
-                ).order_by('-age_url_cnt')
-            chart_info = chart_rank_per_day(dayrank_list)
+            target_date = datetime.datetime.strptime(form.cleaned_data['weekdate_choice'], '%Y-%m-%d')
     else:
-        form = RankPerDayForm()
+        form = WeekForm()
+        target_date = WeekForm().initial_value()[0]
 
+    chart_info = get_agechart_info_week(target_date)
     variables = RequestContext(request,chart_info)
-    return render_to_response('rank_per_day.html',locals(), variables)
+    return render_to_response('rank_per_week.html',locals(), variables)
 
-def chart_rank_per_week(dayrank_list):
-    dayrank_dict = {}
-    xdata = []
-    ydata = []
+def get_agechart_info_week(target_date):
+    target_end = target_date + datetime.timedelta(days=6)
+    target_list = UrlPerAge.objects.filter(age_date__range=[target_date,target_end]).order_by('-age_url_cnt')
 
-    dayrank_dict = make_rank(dayrank_list)
-    for k,v in dayrank_dict:
-        xdata.append(k[0])
-        ydata.append(v)
+    return chart_rank_per_week(target_list)
 
+def chart_rank_per_week(target_list):
+    limit = 30
+    weekrank_dict = make_rank(target_list)[:limit]
+    xdata, ydata = get_age_x_and_y(weekrank_dict)[:2]
     extra_serie = {"tooltip": {"y_start": "", "y_end": " cal"}}
     chartcontainer = 'discretebarchart_container'
-
-    limit = 15
-    dayrank_dict = dayrank_dict[:limit]
     chartdata = {
-        'x': xdata[:limit], 'y1': ydata[:limit], 'extra1': extra_serie,
+        'x': xdata, 'y1': ydata, 'extra1': extra_serie,
     }
     charttype = "discreteBarChart"
     data = {
@@ -452,43 +444,39 @@ def chart_twentyfive_trend(undertf_list, overtf_list):
     return locals()
 
 def hourly_trending_url(request):
-
+    variables = RequestContext(request)
+    latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
+    trend_date = latest.trend_date
+    hour = latest.trend_hh
+    trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
+    chart_info = chart_trendingurl(trend_list[:10])
     if request.method == 'POST':
-        select_url(request)
-
-        form = TrendingUrlForm(request.POST)
-        hour = request.POST.get('hour')
-        if hour == None:
+        selected_url = request.POST.get('manage')
+        select_url(selected_url)
+        if request.POST.has_key('hour'):
+            hour = request.POST.get('hour')
+        else:
             hour = 0
+        form = TrendingUrlForm(request.POST)
         if form.is_valid():
-            trend_date = form.cleaned_data['trend_date']
-            if not TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
+            info = form.cleaned_data
+            trend_date = info['trend_date']
 
+            if TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
+                trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
+                trend_list = trend_list[:10]
+            else:
                 latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
                 trend_date = latest.trend_date
                 hour = latest.trend_hh
-
+                trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
+            chart_info = chart_trendingurl(trend_list[:10])
 
     else:
-        print "5"
         form = TrendingUrlForm()
-        latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
-        trend_date = latest.trend_date
-        hour = latest.trend_hh
-
-    print "6"
-    chart_info = get_trendingurl_chart_info(trend_date, hour)
     variables = RequestContext(request, chart_info)
     return render_to_response('hourly_trending_url.html',locals(), variables)
 
-def get_trendingurl_chart_info(trend_date, hour):
-    limit = 10
-    if TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
-        trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
-    else:
-        trend_list = []
-
-    return chart_trendingurl(trend_list[:limit])
 
 def chart_trendingurl(trending_list):
     title = []
@@ -513,13 +501,17 @@ def manage_url(request):
     url_list = TrendingUrl.objects.filter(trend_url=initial_url).order_by(
                 'trend_date', 'trend_hh')
     chart_info = chart_manage_url(url_list)
-    print request.POST
     if request.method == 'POST':
-        select_url(request.POST)
-        if request.POST.has_key('delete'):
-            form = delete_url(request.POST)
 
-        form = ManageUrlForm(request.POST)
+        if request.POST.has_key('delete'):
+            deleted_url = request.POST.get('delete')
+            if len(deleted_url) == 0:
+                deleted_url = request.POST.get('trend_url')
+            form = delete_url(deleted_url)
+
+
+        elif request.POST.has_key('select'):
+            form = ManageUrlForm(request.POST)
         if form.is_valid():
             trend_url = form.cleaned_data['trend_url']
             url_list = TrendingUrl.objects.filter(trend_url=trend_url).order_by(
@@ -575,18 +567,12 @@ def chart_manage_url(url_list):
 
     return locals()
 
-def select_url(request):
-    selected_url = request.POST.get('manage')
-    print "2"
+def select_url(selected_url):
 
     if TrendingUrl.objects.filter(trend_url=selected_url).exists():
         TrendingUrl.objects.filter(trend_url=selected_url).update(manage_url=True)
 
-def delete_url(request):
-
-    deleted_url = request.POST.get('delete')
-    if len(deleted_url) == 0 :
-        deleted_url = request.POST.get('trend_url')
+def delete_url(deleted_url):
 
     if TrendingUrl.objects.filter(trend_url=deleted_url).exists():
         TrendingUrl.objects.filter(trend_url=deleted_url).update(manage_url=False)

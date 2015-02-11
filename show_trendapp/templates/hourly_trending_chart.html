@@ -5,8 +5,6 @@
 <br>
     {% include_container "discretebarchart_container"  400 600 %}
 <br>
-<form method= "post">
-{% csrf_token %}
 <div class= 'show_table'>
   <table>
     <tr>
@@ -18,7 +16,7 @@
     {% for i in xdata %}
     <tr>
       <td width=50;>
-        <button name="manage" class="black" value="{{i}}" type="submit"> 관리 </button></td>
+        <button name="manage" class="black" value="{{hour}}/{{i}}" type="submit"> 관리 </button></td>
     	<td width=300;><a href="{{ i }}">{{ i }}
     	<td width=300;>{{ title|get_at_index:forloop.counter0 }}</td>
     	<td width=500;>{{ ydata|get_at_index:forloop.counter0 }}</td>

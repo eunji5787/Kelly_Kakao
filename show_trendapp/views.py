@@ -411,42 +411,38 @@ def chart_twentyfive_trend(undertf_list, overtf_list):
 
     return locals()
 
-def hourly_trending_url(request):
-    variables = RequestContext(request)
+def get_trend_info(request, form, hour):
+    limit = 10
     latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
-    trend_date = latest.trend_date
-    hour = latest.trend_hh
-    trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
-    chart_info = chart_trendingurl(trend_list[:10])
+    trend_date, hour = latest.trend_date, latest.trend_hh
     if request.method == 'POST':
-        selected_url = request.POST.get('manage')
-        select_url(selected_url)
+        if form.is_valid():
+            trend_date = form.cleaned_data['trend_date']
+            if not TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
+                return [], trend_date
+
+    return TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')[:limit], trend_date
+
+def hourly_trending_url(request):
+    hour = 0
+    if request.method == 'POST':
+        form = TrendingUrlForm(request.POST)
         if request.POST.has_key('hour'):
             hour = request.POST.get('hour')
-        else:
-            hour = 0
-        form = TrendingUrlForm(request.POST)
-        if form.is_valid():
-            info = form.cleaned_data
-            trend_date = info['trend_date']
-
-            if TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
-                trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
-                trend_list = trend_list[:10]
-            else:
-                latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
-                trend_date = latest.trend_date
-                hour = latest.trend_hh
-                trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
-            chart_info = chart_trendingurl(trend_list[:10])
-
+        if request.POST.has_key('manage'):
+            hour, selected_url = request.POST.get('manage').split("/",1)
+            select_url(selected_url)
+        hour = int(hour)
     else:
         form = TrendingUrlForm()
+
+    obj, trend_date = get_trend_info(request, form, hour)
+    chart_info = chart_trendingurl(obj, trend_date)
     variables = RequestContext(request, chart_info)
     return render_to_response('hourly_trending_url.html',locals(), variables)
 
 
-def chart_trendingurl(trending_list):
+def chart_trendingurl(trending_list, trend_date):
     title = []
     xdata = []
     ydata = []
@@ -455,6 +451,7 @@ def chart_trendingurl(trending_list):
         xdata.append(i.trend_url)
         ydata.append(i.trend_url_cnt)
         title.append(i.trend_title)
+
 
     extra_serie = {"tooltip": {"y_start": "", "y_end": " cal"}}
     chartdata = {'x': xdata, 'y1': ydata, 'extra1': extra_serie}
@@ -674,7 +671,7 @@ def chart_manage_url_week(url_list):
 
         return locals()
 
-def select_url(selected_url):
+def select_url(selected_url=None):
 
     if TrendingUrl.objects.filter(trend_url=selected_url).exists():
         TrendingUrl.objects.filter(trend_url=selected_url).update(manage_url=True)

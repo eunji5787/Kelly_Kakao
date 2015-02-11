@@ -15,5 +15,6 @@ urlpatterns = patterns('',
 	url(r'^manageurl/$', 'show_trendapp.views.manage_url'),
 	url(r'^manageurlday/$', 'show_trendapp.views.manage_url_day'),
 	url(r'^manageurlweek/$', 'show_trendapp.views.manage_url_week'),
+	url(r'^selecturl/(\w+)/$', 'show_trendapp.views.select_url'),
     url(r'^admin/', include(admin.site.urls)),
 )

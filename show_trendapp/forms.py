@@ -73,7 +73,7 @@ class UrlPerAgeForm(forms.Form):
 class TrendingUrlForm(forms.Form):
 
 	trend_date = forms.DateField(widget=extras.SelectDateWidget, label = "", initial=latest_trend_date)
-	#trend_hour = forms.ChoiceField(widget=forms.Select(), choices = HOUR_CHOICES, label = "")
+	#hour = forms.ChoiceField(widget=forms.Select(), choices = HOUR_CHOICES, label = "")
 
 class ManageUrlForm(forms.Form):
 

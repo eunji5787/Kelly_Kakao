@@ -29,29 +29,31 @@ def home(request):
     variables = RequestContext(request, recent_chart)
     return render_to_response('home.html',locals(), variables)
 
+def get_choices(target_id):
+    if target_id >= 0:
+        target_date, target_end = WeekForm().fields['weekdate_choice'].choices[target_id][1].split(" ~ ")
+        return UrlPerAge.objects.filter(age_date__range=[target_date[:10],target_end[:10]]).order_by('-age_url_cnt')
+    else:
+        return []
+
 def rank_per_week(request):
     if request.method == 'POST':
         form = WeekForm(request.POST)
         if form.is_valid():
-            target_date = datetime.datetime.strptime(form.cleaned_data[
-                'weekdate_choice'], '%Y-%m-%d')
+            target_id = int(form.cleaned_data['weekdate_choice'])
     else:
         form = WeekForm()
-        target_date = WeekForm().initial_value()[0]
+        target_id = int(form.initial_value()[0])
 
-    chart_info = get_agechart_info_week(target_date)
+    chart_info = get_agechart_info_week(target_id)
     variables = RequestContext(request,chart_info)
     return render_to_response('rank_per_week.html',locals(), variables)
 
-def get_agechart_info_week(target_date, lastweek_date=None):
-    target_end = target_date + datetime.timedelta(days=6)
-    target_list = UrlPerAge.objects.filter(age_date__range=[target_date,target_end]).order_by('-age_url_cnt')
-    if lastweek_date != None:
-        last_end = lastweek_date + datetime.timedelta(days=6)
-        lastweek_list = UrlPerAge.objects.filter(age_date__range=[lastweek_date,last_end]).order_by('-age_url_cnt')
-
+def get_agechart_info_week(target_id, lastweek_id=None):
+    target_list = get_choices(target_id)
+    if lastweek_id != None:
+        lastweek_list = get_choices(lastweek_id)
         return chart_diff_per_week(target_list, lastweek_list)
-
     return chart_rank_per_week(target_list)
 
 def chart_rank_per_week(target_list):
@@ -76,14 +78,13 @@ def diff_per_week(request):
     if request.method == 'POST':
         form = WeekForm(request.POST)
         if form.is_valid():
-            target_date = datetime.datetime.strptime(form.cleaned_data[
-                'weekdate_choice'], '%Y-%m-%d')
+            target_id = int(form.cleaned_data['weekdate_choice'])
     else:
         form = WeekForm()
-        target_date = WeekForm().initial_value()[0]
+        target_id = int(form.initial_value()[0])
 
-    lastweek_date = target_date - datetime.timedelta(days=7)
-    chart_info = get_agechart_info_week(target_date, lastweek_date)
+    lastweek_id = target_id-1
+    chart_info = get_agechart_info_week(target_id, lastweek_id)
     variables = RequestContext(request,chart_info)
     return render_to_response('diff_per_week.html',locals(), variables)
 
@@ -293,7 +294,6 @@ def chart_traffic_per_day(start_time, end_time, traffic_cnt_list):
 
     return locals()
 
-
 def traffic_per_hour(request):
     show_today = True
 
@@ -465,10 +465,7 @@ def chart_trendingurl(trending_list):
 
 
 def manage_url(request):
-    initial_url = ManageUrlForm().initial_value()[0]
-    url_list = TrendingUrl.objects.filter(trend_url=initial_url).order_by(
-                'trend_date', 'trend_hh')
-    chart_info = chart_manage_url(url_list)
+    trend_url = ManageUrlForm().initial_value()[0]
     if request.method == 'POST':
 
         if request.POST.has_key('delete'):
@@ -476,18 +473,17 @@ def manage_url(request):
             if len(deleted_url) == 0:
                 deleted_url = request.POST.get('trend_url')
             form = delete_url(deleted_url)
-
+            print form.is_valid()
 
         elif request.POST.has_key('select'):
             form = ManageUrlForm(request.POST)
         if form.is_valid():
             trend_url = form.cleaned_data['trend_url']
-            url_list = TrendingUrl.objects.filter(trend_url=trend_url).order_by(
-                'trend_date', 'trend_hh')
-            chart_info = chart_manage_url(url_list)
     else:
         form = ManageUrlForm()
 
+    url_list = TrendingUrl.objects.filter(trend_url=trend_url).order_by('trend_date', 'trend_hh')
+    chart_info = chart_manage_url(url_list)
     variables = RequestContext(request, chart_info)
     return render_to_response('manage_url.html', locals(),variables)
 
@@ -536,6 +532,7 @@ def chart_manage_url(url_list):
     return locals()
 
 def manage_url_day(request):
+    trend_url = ManageUrlForm().initial_value()[0]
     if request.method == 'POST':
 
         if request.POST.has_key('delete'):
@@ -543,14 +540,13 @@ def manage_url_day(request):
             if len(deleted_url) == 0:
                 deleted_url = request.POST.get('trend_url')
             form = delete_url(deleted_url)
-
         elif request.POST.has_key('select'):
             form = ManageUrlForm(request.POST)
+
         if form.is_valid():
             trend_url = form.cleaned_data['trend_url']
     else:
         form = ManageUrlForm()
-        trend_url = ManageUrlForm().initial_value()[0]
 
     url_list = UrlPerAge.objects.filter(age_url=trend_url)
     chart_info = chart_manage_url_day(url_list)
@@ -600,13 +596,15 @@ def chart_manage_url_day(url_list):
         return locals()
 
 def manage_url_week(request):
+    trend_url = ManageUrlForm().initial_value()[0]
     if request.method == 'POST':
-
         if request.POST.has_key('delete'):
             deleted_url = request.POST.get('delete')
+            print deleted_url
             if len(deleted_url) == 0:
                 deleted_url = request.POST.get('trend_url')
             form = delete_url(deleted_url)
+            print form.is_valid()
 
         elif request.POST.has_key('select'):
             form = ManageUrlForm(request.POST)
@@ -614,7 +612,6 @@ def manage_url_week(request):
             trend_url = form.cleaned_data['trend_url']
     else:
         form = ManageUrlForm()
-        trend_url = ManageUrlForm().initial_value()[0]
 
     url_list = UrlPerAge.objects.filter(age_url=trend_url)
     chart_info = chart_manage_url_week(url_list)

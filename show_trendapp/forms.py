@@ -10,9 +10,10 @@ latest_age_date = UrlPerAge.objects.latest('age_date').age_date
 earliest_age_date = UrlPerAge.objects.earliest('age_date').age_date
 latest_trend_date = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0].trend_date
 
+
 def timetostr(time):
 
-    return datetime.date.strftime(time, "%Y-%m-%d")
+    return datetime.date.strftime(time, "%Y-%m-%d-%A")
 
 class WeekForm(forms.Form):
 
@@ -22,12 +23,16 @@ class WeekForm(forms.Form):
     	super(self.__class__, self).__init__(*args, **kwargs)
     	CHOICES = []
     	days = (latest_age_date - earliest_age_date).days
-    	for i in xrange(0,days,7):
-    		start_date = earliest_age_date+datetime.timedelta(i)
-    		end_date = earliest_age_date+datetime.timedelta(i+6)
-    		if end_date > latest_age_date:
-    			end_date = latest_age_date
-    		CHOICES.append((start_date, timetostr(start_date)+" ~ "+timetostr(end_date)))
+        start_date = earliest_age_date
+        i = 0
+        while start_date <= latest_age_date :
+            delta = 6 - start_date.weekday()
+            end_date = start_date+datetime.timedelta(days=delta)
+            if end_date >= latest_age_date:
+                end_date = latest_age_date
+            CHOICES.append((i,timetostr(start_date)+" ~ "+timetostr(end_date)))
+            start_date = end_date+datetime.timedelta(days=1)
+            i += 1
 
     	self.fields['weekdate_choice'].choices = CHOICES
 

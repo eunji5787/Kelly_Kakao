@@ -18,59 +18,23 @@ import urllib2
 import re
 
 def home(request):
-    obj, trend_date, hour = get_trend_info(request)
-    chart_info = chart_trendingurl(obj, trend_date, hour)
-    variables = RequestContext(request, chart_info)
+    select_url(request)
+    latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
+    trend_date = latest.trend_date
+    hour = latest.trend_hh
+    recent_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
+    recent_list = recent_list[:10]
+
+    recent_chart = chart_trendingurl(recent_list)
+    variables = RequestContext(request, recent_chart)
     return render_to_response('home.html',locals(), variables)
 
 def get_choices(target_id):
     if target_id >= 0:
-        return UrlPerAge.objects.filter(age_date__range=WeekForm().fields['weekdate_choice'].choices_dict[target_id])
+        target_date, target_end = WeekForm().fields['weekdate_choice'].choices[target_id][1].split(" ~ ")
+        return UrlPerAge.objects.filter(age_date__range=[target_date[:10],target_end[:10]]).order_by('-age_url_cnt')
     else:
         return []
-
-def get_agechart_info_week(target_id, lastweek_id=None):
-    target_list = get_choices(target_id)
-    if lastweek_id != None:
-        lastweek_list = get_choices(lastweek_id)
-        return chart_diff_per_week(target_list, lastweek_list)
-    return chart_rank_per_week(target_list)
-
-def make_rank(rank_list):
-    rank_dict = {}
-
-    for i in rank_list:
-        ind = (i.age_url, i.age_title)
-        if ind in rank_dict.keys():
-            rank_dict[ind] += i.age_url_cnt
-        else:
-            rank_dict[ind] = i.age_url_cnt
-
-    ranks = rank_dict.items()
-    ranks.sort(key=lambda x: x[1], reverse=True)
-
-    return ranks
-
-def make_diff(target_list, compare_list):
-    target_dict = make_rank(target_list)
-    compare_dict = dict(make_rank(compare_list))
-    same_dict = {}
-    diff_dict = {}
-
-    for ind, cnt in target_dict:
-        if ind in compare_dict.keys():
-            compare_cnt = compare_dict[ind]
-            same_dict[ind] = (compare_cnt, cnt, cnt - compare_cnt, compare_cnt + cnt)
-        else:
-            diff_dict[ind] = (0, cnt, cnt, cnt)
-
-    same_dict = same_dict.items()
-    same_dict.sort(key=lambda x: x[1][2], reverse=True)
-
-    diff_dict = diff_dict.items()
-    diff_dict.sort(key=lambda x: x[1][3], reverse=True)
-
-    return diff_dict, same_dict
 
 def rank_per_week(request):
     if request.method == 'POST':
@@ -84,6 +48,13 @@ def rank_per_week(request):
     chart_info = get_agechart_info_week(target_id)
     variables = RequestContext(request,chart_info)
     return render_to_response('rank_per_week.html',locals(), variables)
+
+def get_agechart_info_week(target_id, lastweek_id=None):
+    target_list = get_choices(target_id)
+    if lastweek_id != None:
+        lastweek_list = get_choices(lastweek_id)
+        return chart_diff_per_week(target_list, lastweek_list)
+    return chart_rank_per_week(target_list)
 
 def chart_rank_per_week(target_list):
     limit = 30
@@ -141,6 +112,34 @@ def chart_diff_per_week(target_list, lastweek_list):
 
     return locals()
 
+def make_rank(rank_list):
+    rank_dict = {}
+
+    for i in rank_list:
+        ind = (i.age_url, i.age_title)
+        if ind in rank_dict.keys():
+            rank_dict[ind] += i.age_url_cnt
+        else:
+            rank_dict[ind] = i.age_url_cnt
+
+    ranks = rank_dict.items()
+    ranks.sort(key=lambda x: x[1], reverse=True)
+
+    return ranks
+
+def rank_per_day(request):
+    if request.method == 'POST':
+        form = RankPerDayForm(request.POST)
+        if form.is_valid():
+            target_date = form.cleaned_data['dayrank_date']
+    else:
+        form = RankPerDayForm()
+        target_date = datetime.date.today() - datetime.timedelta(days=1)
+
+    chart_info = get_agechart_info(target_date)
+    variables = RequestContext(request,chart_info)
+    return render_to_response('rank_per_day.html',locals(), variables)
+
 def get_agechart_info(target_date, yester_date = None):
     target_list = UrlPerAge.objects.filter(age_date = target_date).order_by('-age_url_cnt')
     if yester_date != None:
@@ -164,19 +163,6 @@ def get_age_x_and_y(dayrank_dict):
 
     return xdata, ydata, ydata1
 
-def rank_per_day(request):
-    if request.method == 'POST':
-        form = RankPerDayForm(request.POST)
-        if form.is_valid():
-            target_date = form.cleaned_data['dayrank_date']
-    else:
-        form = RankPerDayForm()
-        target_date = datetime.date.today() - datetime.timedelta(days=1)
-
-    chart_info = get_agechart_info(target_date)
-    variables = RequestContext(request,chart_info)
-    return render_to_response('rank_per_day.html',locals(), variables)
-
 def chart_rank_per_day(dayrank_list):
     limit = 30
     dayrank_dict = make_rank(dayrank_list)[:limit]
@@ -198,6 +184,27 @@ def chart_rank_per_day(dayrank_list):
     }
 
     return locals()
+
+def make_diff(target_list, compare_list):
+    target_dict = make_rank(target_list)
+    compare_dict = dict(make_rank(compare_list))
+    same_dict = {}
+    diff_dict = {}
+
+    for ind, cnt in target_dict:
+        if ind in compare_dict.keys():
+            compare_cnt = compare_dict[ind]
+            same_dict[ind] = (compare_cnt, cnt, cnt - compare_cnt, compare_cnt + cnt)
+        else:
+            diff_dict[ind] = (0, cnt, cnt, cnt)
+
+    same_dict = same_dict.items()
+    same_dict.sort(key=lambda x: x[1][2], reverse=True)
+
+    diff_dict = diff_dict.items()
+    diff_dict.sort(key=lambda x: x[1][3], reverse=True)
+
+    return diff_dict, same_dict
 
 def diff_per_day(request):
     if request.method == 'POST':
@@ -237,13 +244,6 @@ def chart_diff_per_day(target_list, yester_list):
 
     return locals()
 
-def get_trafficday_chart_info(start_time, end_time):
-    traffic_cnt_list = TrafficPerHour.objects.filter(
-        traffic_date__range = [start_time, end_time]
-        ).values('traffic_date').annotate(Sum('traffic_cnt'))
-
-    return chart_traffic_per_day(start_time, end_time, traffic_cnt_list)
-
 def traffic_per_day(request):
     show_week = True
     if request.method == 'POST':
@@ -260,6 +260,13 @@ def traffic_per_day(request):
     chart_info = get_trafficday_chart_info(start_time, end_time)
     variables = RequestContext(request, chart_info)
     return render_to_response('traffic_per_day.html',locals(), variables)
+
+def get_trafficday_chart_info(start_time, end_time):
+    traffic_cnt_list = TrafficPerHour.objects.filter(
+        traffic_date__range = [start_time, end_time]
+        ).values('traffic_date').annotate(Sum('traffic_cnt'))
+
+    return chart_traffic_per_day(start_time, end_time, traffic_cnt_list)
 
 def chart_traffic_per_day(start_time, end_time, traffic_cnt_list):
     ydata = [0]*int(((end_time-start_time).days)+1)
@@ -287,11 +294,6 @@ def chart_traffic_per_day(start_time, end_time, traffic_cnt_list):
 
     return locals()
 
-def get_traffichour_chart_info(target_date):
-    traffic_cnt_list = TrafficPerHour.objects.filter(traffic_date = target_date).order_by('traffic_hh')
-
-    return chart_traffic_per_hour(traffic_cnt_list)
-
 def traffic_per_hour(request):
     show_today = True
 
@@ -307,6 +309,11 @@ def traffic_per_hour(request):
     chart_info = get_traffichour_chart_info(target_date)
     variables = RequestContext(request, chart_info)
     return render_to_response('traffic_per_hour.html',locals(), variables)
+
+def get_traffichour_chart_info(target_date):
+    traffic_cnt_list = TrafficPerHour.objects.filter(traffic_date = target_date).order_by('traffic_hh')
+
+    return chart_traffic_per_hour(traffic_cnt_list)
 
 def chart_traffic_per_hour(traffic_cnt_list):
     xdata = []
@@ -340,27 +347,6 @@ def calculate_difference(scrap_counts):
 
     return l
 
-def get_twentyfive_x_and_y(age_list):
-    time_info = []
-    ydata = []
-    xdata = []
-
-    for i in age_list:
-        if not i.age_url in xdata:
-            xdata.append(i.age_url)
-            ydata.append(i.age_url_cnt)
-            time_info.append(i.age_date)
-
-    return xdata, ydata, time_info
-
-def get_twentyfive_chart_info(start_time, end_time):
-    undertf_list = UrlPerAge.objects.filter(age_date__range = [start_time, end_time], over_tf=False
-        ).order_by('-age_url_cnt')
-    overtf_list = UrlPerAge.objects.filter(age_date__range = [start_time, end_time], over_tf=True
-        ).order_by('-age_url_cnt')
-
-    return chart_twentyfive_trend(undertf_list, overtf_list)
-
 def twentyfive_trend(request):
     show_week = True
 
@@ -378,6 +364,27 @@ def twentyfive_trend(request):
     chart_info = get_twentyfive_chart_info(start_time, end_time)
     variables = RequestContext(request, chart_info)
     return render_to_response('twentyfive_trend.html', locals(), variables)
+
+def get_twentyfive_chart_info(start_time, end_time):
+    undertf_list = UrlPerAge.objects.filter(age_date__range = [start_time, end_time], over_tf=False
+        ).order_by('-age_url_cnt')
+    overtf_list = UrlPerAge.objects.filter(age_date__range = [start_time, end_time], over_tf=True
+        ).order_by('-age_url_cnt')
+
+    return chart_twentyfive_trend(undertf_list, overtf_list)
+
+def get_twentyfive_x_and_y(age_list):
+    time_info = []
+    ydata = []
+    xdata = []
+
+    for i in age_list:
+        if not i.age_url in xdata:
+            xdata.append(i.age_url)
+            ydata.append(i.age_url_cnt)
+            time_info.append(i.age_date)
+
+    return xdata, ydata, time_info
 
 def chart_twentyfive_trend(undertf_list, overtf_list):
     xdata1, ydata1, time_info1 = get_twentyfive_x_and_y(undertf_list)
@@ -404,37 +411,42 @@ def chart_twentyfive_trend(undertf_list, overtf_list):
 
     return locals()
 
-def get_trend_info(request, form=None):
-    limit = 10
+def hourly_trending_url(request):
+    variables = RequestContext(request)
     latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
-    trend_date, hour = latest.trend_date, latest.trend_hh
+    trend_date = latest.trend_date
+    hour = latest.trend_hh
+    trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
+    chart_info = chart_trendingurl(trend_list[:10])
     if request.method == 'POST':
+        selected_url = request.POST.get('manage')
+        select_url(selected_url)
         if request.POST.has_key('hour'):
             hour = request.POST.get('hour')
-        if request.POST.has_key('manage'):
-            hour, selected_url = request.POST.get('manage').split("/",1)
-            select_url(selected_url)
-
-        if form.is_valid():
-            trend_date = form.cleaned_data['trend_date']
-            hour = int(hour)
-            if not TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
-                return [], trend_date, hour
-
-    return TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')[:limit], trend_date, hour
-
-def hourly_trending_url(request):
-    if request.method == 'POST':
+        else:
+            hour = 0
         form = TrendingUrlForm(request.POST)
+        if form.is_valid():
+            info = form.cleaned_data
+            trend_date = info['trend_date']
+
+            if TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).exists():
+                trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
+                trend_list = trend_list[:10]
+            else:
+                latest = TrendingUrl.objects.order_by('-trend_date', '-trend_hh')[0]
+                trend_date = latest.trend_date
+                hour = latest.trend_hh
+                trend_list = TrendingUrl.objects.filter(trend_date = trend_date, trend_hh = hour).order_by('-trend_url_cnt')
+            chart_info = chart_trendingurl(trend_list[:10])
+
     else:
         form = TrendingUrlForm()
-
-    obj, trend_date, hour = get_trend_info(request, form)
-    chart_info = chart_trendingurl(obj, trend_date, hour)
     variables = RequestContext(request, chart_info)
     return render_to_response('hourly_trending_url.html',locals(), variables)
 
-def chart_trendingurl(trending_list, trend_date, hour):
+
+def chart_trendingurl(trending_list):
     title = []
     xdata = []
     ydata = []
@@ -444,7 +456,6 @@ def chart_trendingurl(trending_list, trend_date, hour):
         ydata.append(i.trend_url_cnt)
         title.append(i.trend_title)
 
-
     extra_serie = {"tooltip": {"y_start": "", "y_end": " cal"}}
     chartdata = {'x': xdata, 'y1': ydata, 'extra1': extra_serie}
     charttype = "discreteBarChart"
@@ -452,7 +463,8 @@ def chart_trendingurl(trending_list, trend_date, hour):
 
     return locals()
 
-def manageurl_form(request):
+
+def manage_url(request):
     trend_url = ManageUrlForm().initial_value()[0]
     if request.method == 'POST':
 
@@ -461,6 +473,7 @@ def manageurl_form(request):
             if len(deleted_url) == 0:
                 deleted_url = request.POST.get('trend_url')
             form = delete_url(deleted_url)
+            print form.is_valid()
 
         elif request.POST.has_key('select'):
             form = ManageUrlForm(request.POST)
@@ -469,26 +482,24 @@ def manageurl_form(request):
     else:
         form = ManageUrlForm()
 
-    return trend_url, form
-
-def manage_url(request):
-    trend_url, form = manageurl_form(request)
-    chart_info = chart_manage_url(trend_url)
+    url_list = TrendingUrl.objects.filter(trend_url=trend_url).order_by('trend_date', 'trend_hh')
+    chart_info = chart_manage_url(url_list)
     variables = RequestContext(request, chart_info)
     return render_to_response('manage_url.html', locals(),variables)
 
-def chart_manage_url(trend_url):
-    try:
-        url_list = TrendingUrl.objects.filter(trend_url=trend_url)
-        start_date , start_hour = url_list.earliest('trend_date').trend_date , url_list.earliest('trend_date').trend_hh
-        end_date, end_hour =  url_list.latest('trend_date').trend_date, url_list.latest('trend_date').trend_hh
+
+def chart_manage_url(url_list):
+    xdata = [i for i in range(24)]
+    ydata1 = [0]*len(xdata)
+    ydata2 = [0]*len(xdata)
+    cntperhour = [0]*len(xdata)
+
+    if len(url_list) > 0:
+        start_date , start_hour = url_list.first().trend_date , url_list.first().trend_hh
+        end_date, end_hour =  url_list.last().trend_date , url_list.last().trend_hh
+
         time_list = [i.trend_hh for i in url_list]
         time_set =  set([(x,time_list.count(x)) for x in time_list])
-
-        xdata = [i for i in range(24)]
-        ydata1 = [0]*len(xdata)
-        ydata2 = [0]*len(xdata)
-        cntperhour = [0]*len(xdata)
 
         for i in url_list:
             ind = xdata.index(i.trend_hh)
@@ -497,59 +508,67 @@ def chart_manage_url(trend_url):
             else:
                 ydata1[ind] = ydata1[ind] + i.trend_url_cnt
 
+
         for i in time_set:
             ydata2[i[0]] = ydata1[i[0]]/i[1]
             cntperhour[i[0]] = i[1]
 
-    except:
-        xdata = []
-        ydata1 = []
-        ydata2 = []
-        cntperhour = []
-
-    finally:
-        tooltip_date = "%d %b %Y %H:%M:%S %p"
-        extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"},
-                       "date_format": tooltip_date}
-        chartdata = {
-            'x': xdata,
-            'name1': '  시간별 누적 스크랩 횟수  ', 'y1': ydata1, 'extra': extra_serie,
-            'name2': '  시간별 평균 스크랩 횟수  ', 'y2': ydata2, 'extra': extra_serie,
-        }
-        kw_extra = { 'x_is_date': False , 'x_axis_format': ""}
-        charttype = "lineChart"
-        data = {
-            'charttype': charttype,
-            'chartdata': chartdata,
-            'kw_extra' : kw_extra,
-        }
+    tooltip_date = "%d %b %Y %H:%M:%S %p"
+    extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"},
+                   "date_format": tooltip_date}
+    chartdata = {
+        'x': xdata,
+        'name1': '  시간별 누적 스크랩 횟수  ', 'y1': ydata1, 'extra': extra_serie,
+        'name2': '  시간별 평균 스크랩 횟수  ', 'y2': ydata2, 'extra': extra_serie,
+    }
+    kw_extra = { 'x_is_date': False , 'x_axis_format': ""}
+    charttype = "lineChart"
+    data = {
+        'charttype': charttype,
+        'chartdata': chartdata,
+        'kw_extra' : kw_extra,
+    }
 
     return locals()
 
-def start_and_end(trend_url):
-    if trend_url:
-        start_date = UrlPerAge.objects.filter(age_url=trend_url).earliest('age_date').age_date
-        end_date = UrlPerAge.objects.filter(age_url=trend_url).latest('age_date').age_date
-        days = (end_date-start_date).days
-
-    return start_date, end_date, days
-
 def manage_url_day(request):
-    trend_url, form = manageurl_form(request)
-    chart_info = chart_manage_url_day(trend_url)
+    trend_url = ManageUrlForm().initial_value()[0]
+    if request.method == 'POST':
+
+        if request.POST.has_key('delete'):
+            deleted_url = request.POST.get('delete')
+            if len(deleted_url) == 0:
+                deleted_url = request.POST.get('trend_url')
+            form = delete_url(deleted_url)
+        elif request.POST.has_key('select'):
+            form = ManageUrlForm(request.POST)
+
+        if form.is_valid():
+            trend_url = form.cleaned_data['trend_url']
+    else:
+        form = ManageUrlForm()
+
+    url_list = UrlPerAge.objects.filter(age_url=trend_url)
+    chart_info = chart_manage_url_day(url_list)
     variables = RequestContext(request, chart_info)
     return render_to_response('manage_url_day.html', locals(),variables)
 
-def chart_manage_url_day(trend_url):
+
+def chart_manage_url_day(url_list):
     try:
         show_chart = True
-        start_date, end_date, days = start_and_end(trend_url)
-        url_list = UrlPerAge.objects.filter(age_url=trend_url).values("age_date").annotate(Sum('age_url_cnt'))
-        ydata1 = [0]*int(days+1)
+        start_date = url_list.earliest('age_date').age_date
+        end_date = url_list.latest('age_date').age_date
+
+        ydata1 = [0]*int(((end_date-start_date).days)+1)
         time_info = [start_date + datetime.timedelta(days=x) for x in range(len(ydata1))]
+
         for i in url_list:
-            ind = time_info.index(i['age_date'])
-            ydata1[ind] = i['age_url_cnt__sum']
+            ind = time_info.index(i.age_date)
+            if ydata1[ind] ==0:
+                ydata1[ind] = i.age_url_cnt
+            else:
+                ydata1[ind] = ydata1[ind] + i.age_url_cnt
         xdata = map(lambda x: int(time.mktime(x.timetuple()))*1000, time_info)
 
     except:
@@ -577,24 +596,63 @@ def chart_manage_url_day(trend_url):
         return locals()
 
 def manage_url_week(request):
-    trend_url, form = manageurl_form(request)
-    chart_info = chart_manage_url_week(trend_url)
+    trend_url = ManageUrlForm().initial_value()[0]
+    if request.method == 'POST':
+        if request.POST.has_key('delete'):
+            deleted_url = request.POST.get('delete')
+            print deleted_url
+            if len(deleted_url) == 0:
+                deleted_url = request.POST.get('trend_url')
+            form = delete_url(deleted_url)
+            print form.is_valid()
+
+        elif request.POST.has_key('select'):
+            form = ManageUrlForm(request.POST)
+        if form.is_valid():
+            trend_url = form.cleaned_data['trend_url']
+    else:
+        form = ManageUrlForm()
+
+    url_list = UrlPerAge.objects.filter(age_url=trend_url)
+    chart_info = chart_manage_url_week(url_list)
     variables = RequestContext(request, chart_info)
     return render_to_response('manage_url_week.html', locals(),variables)
 
-def chart_manage_url_week(trend_url):
+
+def chart_manage_url_week(url_list):
     try:
         show_chart = True
-        start_date , end_date = start_and_end(trend_url)[:2]
-        time_info = map(lambda (k,v): v, WeekForm().fields['weekdate_choice'].choices_dict.items())
-        time_info1 = map(lambda (k,v): v, WeekForm().fields['weekdate_choice'].choices)
-        url_list = map(get_choices, range(len(time_info)))
-        ydata = map(lambda x: x.filter(age_url=trend_url).aggregate(Sum('age_url_cnt'))['age_url_cnt__sum'] ,url_list)
+        start_agedate = url_list.earliest('age_date').age_date
+        end_agedate = url_list.latest('age_date').age_date
+        days = (end_agedate - start_agedate).days
+
+        time_info = []
+        time_info1 = []
+        for i in xrange(0,days,7):
+            start_date = start_agedate+datetime.timedelta(i)
+            end_date = start_agedate+datetime.timedelta(i+6)
+            if end_date > end_agedate:
+                end_date = end_agedate
+            time_info.append((start_date,end_date))
+            time_info1.append(datetime.date.strftime(start_date, "%Y-%m-%d") +" ~ " +
+                datetime.date.strftime(end_date, "%Y-%m-%d"))
+
+        ydata1 = [0]*int(len(time_info))
+
+        for i in url_list:
+            for j in time_info:
+                if j[0] <= i.age_date <= j[1]:
+                    ind = time_info.index(j)
+            if ydata1[ind] ==0:
+                ydata1[ind] = i.age_url_cnt
+            else:
+                ydata1[ind] = ydata1[ind] + i.age_url_cnt
+
         xdata = map(lambda x: int(time.mktime(x[0].timetuple()))*1000, time_info)
 
     except:
         show_chart = False
-        ydata = []
+        ydata1 = []
         xdata = []
         time_info = []
 
@@ -604,7 +662,7 @@ def chart_manage_url_week(trend_url):
                        "date_format": tooltip_date}
         chartdata = {
             'x': xdata,
-            'name1': '  주별 스크랩 횟수  ', 'y1': ydata, 'extra': extra_serie,
+            'name1': '  주별 스크랩 횟수  ', 'y1': ydata1, 'extra': extra_serie,
         }
         kw_extra = { 'x_is_date': True , 'x_axis_format': "%d %b %Y" }
         charttype = "lineChart"
@@ -616,7 +674,7 @@ def chart_manage_url_week(trend_url):
 
         return locals()
 
-def select_url(selected_url=None):
+def select_url(selected_url):
 
     if TrendingUrl.objects.filter(trend_url=selected_url).exists():
         TrendingUrl.objects.filter(trend_url=selected_url).update(manage_url=True)

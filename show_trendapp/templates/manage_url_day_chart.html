@@ -25,10 +25,10 @@
 	   <td width=150;><b> Date </b></td>
 	   <td width=50;><b> 스크랩 횟수 </b></td>
 	</tr>
-	<tr>{% for i in chart_info.chartdata.y1 %}{% if not i == 0 %}
-	   <td width=150;><b> {{ time_info|get_at_index:forloop.counter0 }}  </b></td>
-	   <td width=50;> {{ i }}</td>
-	</tr>{% endif %}{% endfor %}
+	<tr>{% for i in url_list %}
+	   <td width=150;><b> {{ i.age_date }}  </b></td>
+	   <td width=50;> {{ i.age_url_cnt__sum }}</td>
+	</tr>{% endfor %}
 	</table>
 {% else %}
 <하루에 100번 이하로 공유된 url은 자료가 수집되지 않습니다 >

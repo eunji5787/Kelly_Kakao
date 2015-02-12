@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block menu %}
-{{ recent_list.0.trend_date|date:"Y. m. d l"}} 의 뜨는 Url
+{{ trend_date|date:"Y. m. d l"}} {{hour}} 시
 {% endblock %}
 {% block main %}
+<div class = "boxes">
 {% include 'hourly_trending_chart.html' %}
 {% endblock %}
-
+</div>

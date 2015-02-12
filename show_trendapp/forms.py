@@ -15,6 +15,10 @@ def timetostr(time):
 
     return datetime.date.strftime(time, "%Y-%m-%d-%A")
 
+def strtotime(timestr):
+
+    return datetime.datetime.strptime(timestr,"%Y-%m-%d").date()
+
 class WeekForm(forms.Form):
 
     weekdate_choice = forms.ChoiceField(widget=forms.Select())
@@ -22,6 +26,7 @@ class WeekForm(forms.Form):
     def __init__(self, *args, **kwargs):
     	super(self.__class__, self).__init__(*args, **kwargs)
     	CHOICES = []
+        CHOICES_dict = {}
     	days = (latest_age_date - earliest_age_date).days
         start_date = earliest_age_date
         i = 0
@@ -31,10 +36,13 @@ class WeekForm(forms.Form):
             if end_date >= latest_age_date:
                 end_date = latest_age_date
             CHOICES.append((i,timetostr(start_date)+" ~ "+timetostr(end_date)))
+            CHOICES_dict[i] = (start_date, end_date)
             start_date = end_date+datetime.timedelta(days=1)
             i += 1
 
     	self.fields['weekdate_choice'].choices = CHOICES
+        self.fields['weekdate_choice'].choices_dict = CHOICES_dict
+        #self.fields['weekdate_choice'].length = i
 
     	if len(CHOICES) > 0:
     		self.fields['weekdate_choice'].initial = CHOICES[0]
@@ -43,7 +51,6 @@ class WeekForm(forms.Form):
 
     def initial_value(self):
     	return self.fields['weekdate_choice'].initial
-
 
 class RankPerDayForm(forms.Form):
 
